@@ -12,12 +12,12 @@ class AddCatchPage extends StatefulWidget {
   final String tripLocation;
 
   const AddCatchPage({
-    Key? key,
+    super.key,
     required this.userId,
     required this.tripId,
     required this.tripDate,     // <-- Make required
     required this.tripLocation,
-  }) : super(key: key);
+  });
 
   @override
   AddCatchPageState createState() => AddCatchPageState();

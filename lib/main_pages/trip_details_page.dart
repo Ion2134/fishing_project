@@ -45,7 +45,7 @@ class _StickyTripActionButtonHeader extends SliverPersistentHeaderDelegate {
 class TripDetailsPage extends StatefulWidget {
   final String userId;
   final String tripId;
-  const TripDetailsPage({Key? key, required this.userId, required this.tripId}) : super(key: key);
+  const TripDetailsPage({super.key, required this.userId, required this.tripId});
   @override
   TripDetailsPageState createState() => TripDetailsPageState();
 }

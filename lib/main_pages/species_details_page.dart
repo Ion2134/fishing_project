@@ -13,11 +13,11 @@ class SpeciesDetailsPage extends StatefulWidget {
   final String speciesDisplayName; // Passed for the AppBar title
 
   const SpeciesDetailsPage({
-    Key? key,
+    super.key,
     required this.userId,
     required this.speciesNameLowercase,
     required this.speciesDisplayName,
-  }) : super(key: key);
+  });
 
   @override
   SpeciesDetailsPageState createState() => SpeciesDetailsPageState();
