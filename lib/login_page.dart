@@ -77,16 +77,12 @@ class LoginPageState extends State<LoginPage> {
       switch (e.code) {
         case 'user-not-found':
           message = 'No user found for that email.';
-          break;
         case 'wrong-password':
           message = 'Wrong password provided.';
-          break;
         case 'invalid-email':
           message = 'The email address is not valid.';
-          break;
         case 'user-disabled':
           message = 'This user account has been disabled.';
-          break;
       // Add more specific cases as needed
         default:
           message = 'An error occurred. Please try again.';

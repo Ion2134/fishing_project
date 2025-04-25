@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'main_pages/trips_page.dart';
-import 'main_pages/fish_page.dart';
+import 'main_pages/fish_caught_page.dart';
 import 'main_pages/settings_page.dart';
 
 class MainAppPage extends StatefulWidget {
@@ -15,7 +15,7 @@ class MainAppPageState extends State<MainAppPage> {
   // List of the pages/widgets to display for each tab
   static final List<Widget> _widgetOptions = <Widget>[
     TripsPage(),     // Index 0
-    FishPage(),      // Index 1
+    FishCaughtPage(),      // Index 1
     SettingsPage(),  // Index 2
   ];
 
@@ -60,7 +60,7 @@ class MainAppPageState extends State<MainAppPage> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.phishing), // Placeholder icon for Fish
-            label: 'Fish',
+            label: 'Fish Caught',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings_outlined), // Icon for Settings

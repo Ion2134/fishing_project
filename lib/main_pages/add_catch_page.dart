@@ -8,11 +8,15 @@ import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore
 class AddCatchPage extends StatefulWidget {
   final String userId;
   final String tripId;
+  final Timestamp tripDate; // Use Timestamp for consistency
+  final String tripLocation;
 
   const AddCatchPage({
     Key? key,
     required this.userId,
     required this.tripId,
+    required this.tripDate,     // <-- Make required
+    required this.tripLocation,
   }) : super(key: key);
 
   @override
@@ -61,84 +65,106 @@ class AddCatchPageState extends State<AddCatchPage> {
 
   // --- Save Catch Logic ---
   Future<void> _saveCatch() async {
-    // Validate form
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    // Optional: Check if an image was selected (make it mandatory?)
-    // if (_imageFile == null) {
-    //    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select an image.')));
-    //    return;
-    // }
-
     setState(() { _isLoading = true; });
 
     try {
       String? imageUrl;
       String? imagePath;
 
-      // --- 1. Upload Image to Firebase Storage (if selected) ---
+      // --- 1. Upload Image (if selected) ---
       if (_imageFile != null) {
-        // Create a unique file path
         final String fileName = '${widget.userId}_${widget.tripId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        final Reference storageRef = FirebaseStorage.instance
-            .ref()
-            .child('catch_images') // Optional: Subfolder for organization
-            .child(fileName);
-
-        // Upload the file
+        final Reference storageRef = FirebaseStorage.instance.ref().child('catch_images').child(fileName);
         final UploadTask uploadTask = storageRef.putFile(_imageFile!);
-
-        // Wait for upload completion
         final TaskSnapshot snapshot = await uploadTask;
-
-        // Get download URL
         imageUrl = await snapshot.ref.getDownloadURL();
-        imagePath = snapshot.ref.fullPath; // Store path for potential future deletion
+        imagePath = snapshot.ref.fullPath;
         print("Image uploaded: $imageUrl");
       }
 
-      // --- 2. Prepare Catch Data for Firestore ---
-      final catchData = {
-        'species': _speciesController.text.trim(),
-        'length': double.tryParse(_lengthController.text.trim()), // Store as number
-        'quantity': int.tryParse(_quantityController.text.trim()) ?? 1, // Store as number, default 1
-        'imageUrl': imageUrl, // Can be null if no image was selected
-        'imagePath': imagePath, // Can be null
-        'caughtAt': FieldValue.serverTimestamp(), // Timestamp of logging
-        // Consider adding userId and tripId here IF your security rules need them,
-        // but often they are implicitly known via the path.
-        // 'userId': widget.userId,
-        // 'tripId': widget.tripId,
-      };
+      // --- Get Firestore instance and Batch ---
+      final firestore = FirebaseFirestore.instance;
+      final batch = firestore.batch();
 
-      // --- 3. Add Catch Data to Firestore Subcollection ---
-      await FirebaseFirestore.instance
+      // --- 2. Prepare Data and References ---
+      final String species = _speciesController.text.trim();
+      final String speciesLowercase = species.toLowerCase(); // For document ID
+
+      // --- Ref 1: Original Catch Document (auto-ID) ---
+      final catchRef = firestore
           .collection('users')
           .doc(widget.userId)
           .collection('trips')
           .doc(widget.tripId)
-          .collection('catches') // The subcollection for catches
-          .add(catchData);
+          .collection('catches')
+          .doc(); // Let Firestore generate the ID
 
-      print("Catch data saved successfully!");
+      final catchData = {
+        'species': species,
+        'length': double.tryParse(_lengthController.text.trim()),
+        'quantity': int.tryParse(_quantityController.text.trim()) ?? 1,
+        'imageUrl': imageUrl,
+        'imagePath': imagePath,
+        'caughtAt': FieldValue.serverTimestamp(),
+        // We have tripDate and tripLocation from widget now, can optionally store here too
+        // 'tripDate': widget.tripDate,
+        // 'tripLocation': widget.tripLocation,
+      };
+      batch.set(catchRef, catchData); // Add original catch to batch
+
+      // --- Ref 2: Species Summary in userFishCatalog ---
+      final speciesSummaryRef = firestore
+          .collection('userFishCatalog')
+          .doc(widget.userId)
+          .collection('caughtSpecies')
+          .doc(speciesLowercase); // Use lowercase species as ID
+
+      final speciesSummaryData = {
+        'speciesDisplayName': species, // Store the original casing for display
+        'lastCaught': FieldValue.serverTimestamp(), // Update last caught time
+        // Only set image URL if one was uploaded for *this* catch
+        if (imageUrl != null) 'representativeImageUrl': imageUrl,
+        'totalCaught': FieldValue.increment(int.tryParse(_quantityController.text.trim()) ?? 1), // Increment total count
+      };
+      // Use merge: true to create if doesn't exist, or update existing fields
+      batch.set(speciesSummaryRef, speciesSummaryData, SetOptions(merge: true));
+
+      // --- Ref 3: Associated Trip Link in userFishCatalog ---
+      final associatedTripRef = speciesSummaryRef
+          .collection('associatedTrips')
+          .doc(widget.tripId); // Use tripId as the doc ID here
+
+      final tripLinkData = {
+        'tripDate': widget.tripDate, // Passed from TripDetailsPage
+        'tripLocation': widget.tripLocation, // Passed from TripDetailsPage
+        // Optional: Can store the specific catch ID if needed for linking back
+        // 'lastCatchId': catchRef.id,
+        // Optional: Increment count for this species *on this trip*
+        // 'catchCount': FieldValue.increment(int.tryParse(_quantityController.text.trim()) ?? 1), // Careful if overwriting
+      };
+      // Just set (overwrite if exists) - this ensures the link exists
+      // If you add the increment above, you might need SetOptions(merge:true)
+      batch.set(associatedTripRef, tripLinkData);
+
+      // --- 3. Commit the Batch ---
+      await batch.commit(); // Atomically write all changes
+
+      print("Catch data and fish catalog updated successfully!");
 
       if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Catch recorded successfully!')));
-      Navigator.pop(context); // Go back to TripDetailsPage
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Catch recorded successfully!')));
+      Navigator.pop(context);
 
     } catch (e) {
-      print("Error saving catch: $e");
+      print("Error saving catch with batch: $e");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error saving catch: ${e.toString()}')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error saving catch: ${e.toString()}')));
       }
     } finally {
-      if (mounted) {
-        setState(() { _isLoading = false; });
-      }
+      if (mounted) { setState(() { _isLoading = false; }); }
     }
   }
 

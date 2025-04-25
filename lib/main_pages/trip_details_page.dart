@@ -58,55 +58,103 @@ class TripDetailsPageState extends State<TripDetailsPage> {
   @override
   void initState() {
     super.initState();
-    _tripDocRef = _firestore.collection('users').doc(widget.userId).collection('trips').doc(widget.tripId);
+    _tripDocRef = _firestore
+        .collection('users')
+        .doc(widget.userId)
+        .collection('trips')
+        .doc(widget.tripId);
   }
 
-  // --- _recordCatch Function (Keep as is, navigates to AddCatchPage) ---
-  void _recordCatch() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AddCatchPage(
-          userId: widget.userId,
-          tripId: widget.tripId,
-        ),
-      ),
-    );
-    print("Navigating to AddCatchPage for Trip ID: ${widget.tripId}");
-  }
+  // // --- _recordCatch Function (Keep as is, navigates to AddCatchPage) ---
+  // void _recordCatch() {
+  //   Navigator.push(
+  //     context,
+  //     MaterialPageRoute(
+  //       builder: (context) =>
+  //           AddCatchPage(
+  //             userId: widget.userId,
+  //             tripId: widget.tripId,
+  //           ),
+  //     ),
+  //   );
+  //   print("Navigating to AddCatchPage for Trip ID: ${widget.tripId}");
+  // }
 
   // --- _promptAndCompleteTrip Function (Keep as is) ---
-  Future<void> _promptAndCompleteTrip() async { /* ... same implementation ... */
+  Future<void> _promptAndCompleteTrip() async {
+    /* ... same implementation ... */
     if (_isCompleting) return;
     final reviewController = TextEditingController();
-    final result = await showDialog<String?>( context: context, barrierDismissible: false,
-      builder: (BuildContext context) { /* ... AlertDialog setup ... */
+    final result = await showDialog<String?>(
+      context: context, barrierDismissible: false,
+      builder: (BuildContext context) {
+        /* ... AlertDialog setup ... */
         return AlertDialog(
           title: Text("Complete Trip"),
-          content: SingleChildScrollView( child: Column( mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [ Text("Would you like to add a review? (Optional)"), SizedBox(height: 15), TextField(controller: reviewController, maxLines: 3, decoration: InputDecoration(hintText: "Enter your review here...", border: OutlineInputBorder())), ], ), ),
-          actions: <Widget>[ TextButton(child: Text("Cancel"), onPressed: () => Navigator.of(context).pop(null)), TextButton(child: Text("Skip Review & Complete"), onPressed: () => Navigator.of(context).pop('')), ElevatedButton(child: Text("Save Review & Complete"), onPressed: () => Navigator.of(context).pop(reviewController.text)) ],
+          content: SingleChildScrollView(child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Would you like to add a review? (Optional)"),
+              SizedBox(height: 15),
+              TextField(controller: reviewController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                      hintText: "Enter your review here...",
+                      border: OutlineInputBorder())),
+            ],),),
+          actions: <Widget>[
+            TextButton(child: Text("Cancel"),
+                onPressed: () => Navigator.of(context).pop(null)),
+            TextButton(child: Text("Skip Review & Complete"),
+                onPressed: () => Navigator.of(context).pop('')),
+            ElevatedButton(child: Text("Save Review & Complete"),
+                onPressed: () =>
+                    Navigator.of(context).pop(reviewController.text))
+          ],
         );
       },
     );
     if (!mounted) return;
-    if (result != null) { _performCompletion(result.isEmpty ? null : result); }
+    if (result != null) {
+      _performCompletion(result.isEmpty ? null : result);
+    }
     reviewController.dispose();
   }
 
   // --- _performCompletion Function (Keep as is) ---
-  Future<void> _performCompletion(String? reviewText) async { /* ... same implementation ... */
+  Future<void> _performCompletion(String? reviewText) async {
+    /* ... same implementation ... */
     if (_isCompleting) return;
-    setState(() { _isCompleting = true; });
+    setState(() {
+      _isCompleting = true;
+    });
     try {
       final Map<String, dynamic> updateData = {'status': 'Completed'};
-      if (reviewText != null && reviewText.trim().isNotEmpty) { updateData['review'] = reviewText.trim(); }
+      if (reviewText != null && reviewText
+          .trim()
+          .isNotEmpty) {
+        updateData['review'] = reviewText.trim();
+      }
       await _tripDocRef.update(updateData);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Trip marked as completed!'), duration: Duration(seconds: 2)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Trip marked as completed!'),
+          duration: Duration(seconds: 2)));
       Navigator.pop(context);
     } catch (e) {
-      print("Error completing trip ${widget.tripId}: $e"); if(mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error completing trip: ${e.toString()}'))); }
-    } finally { if (mounted) { setState(() { _isCompleting = false; }); } }
+      print("Error completing trip ${widget.tripId}: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error completing trip: ${e.toString()}')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCompleting = false;
+        });
+      }
+    }
   }
 
   // --- Helper Widget to Build Each Catch List Item ---
@@ -143,17 +191,23 @@ class TripDetailsPageState extends State<TripDetailsPage> {
             child: CachedNetworkImage( // Use CachedNetworkImage
               imageUrl: imageUrl,
               fit: BoxFit.cover,
-              placeholder: (context, url) => Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
-              errorWidget: (context, url, error) => Icon(Icons.broken_image, color: Colors.grey),
+              placeholder: (context, url) =>
+                  Center(child: SizedBox(width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2))),
+              errorWidget: (context, url, error) =>
+                  Icon(Icons.broken_image, color: Colors.grey),
             ),
           )
-              : Icon(Icons.image_not_supported, color: Colors.grey), // Placeholder if no image URL
+              : Icon(Icons.image_not_supported,
+              color: Colors.grey), // Placeholder if no image URL
         ),
 
         // --- Title & Subtitle ---
         title: Text(species, style: TextStyle(fontWeight: FontWeight.w500)),
         subtitle: Text(subtitle),
-        contentPadding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0), // Adjust padding
+        contentPadding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+        // Adjust padding
 
         // --- Trailing Pending Indicator ---
         trailing: isPending
@@ -161,14 +215,17 @@ class TripDetailsPageState extends State<TripDetailsPage> {
           message: 'Saving...',
           child: Icon(Icons.sync_outlined, size: 18, color: Colors.grey),
         )
-            : null, // No indicator if synced
+            : null,
+        // No indicator if synced
 
         // TODO: Add onTap for future actions like editing or deleting a catch
         onTap: () {
           print("Tapped on catch: ${catchDoc.id}");
           // Potential future navigation to edit catch details
         },
-        tileColor: isPending ? Colors.grey.shade50 : null, // Optional: Highlight pending items
+        tileColor: isPending
+            ? Colors.grey.shade50
+            : null, // Optional: Highlight pending items
       ),
     );
   }
@@ -181,11 +238,15 @@ class TripDetailsPageState extends State<TripDetailsPage> {
         title: Text('Trip Details'),
       ),
       body: SafeArea(
+        // The main StreamBuilder for trip details - builds the body content
         child: StreamBuilder<DocumentSnapshot>(
-          stream: _tripDocRef.snapshots(), // Stream for trip details
-          builder: (context, tripSnapshot) {
+          stream: _tripDocRef.snapshots(),
+          builder: (context,
+              tripSnapshot) { // tripSnapshot contains the trip data
+
             // --- Trip Details Loading/Error/NotFound Handling ---
             if (tripSnapshot.connectionState == ConnectionState.waiting) {
+              // Show loading indicator for the main body content
               return Center(child: CircularProgressIndicator());
             }
             if (tripSnapshot.hasError) {
@@ -195,38 +256,90 @@ class TripDetailsPageState extends State<TripDetailsPage> {
               return Center(child: Text("Trip not found."));
             }
 
-            // --- Extract Trip Data ---
-            Map<String, dynamic> tripData = tripSnapshot.data!.data() as Map<String, dynamic>;
+            // --- Extract Trip Data (Available in *this* scope for building the body) ---
+            Map<String, dynamic> tripData = tripSnapshot.data!.data() as Map<
+                String,
+                dynamic>;
             String location = tripData['tripLocation'] ?? 'No Location';
-            DateTime? tripDate;
+            DateTime? tripDateForDisplay; // Renamed to avoid confusion with FAB's date
             if (tripData['tripDate'] is Timestamp) {
-              tripDate = (tripData['tripDate'] as Timestamp).toDate();
+              tripDateForDisplay = (tripData['tripDate'] as Timestamp).toDate();
             }
-            String formattedDate = tripDate != null ? DateFormat.yMMMEd().format(tripDate) : 'No Date';
+            String formattedDate = tripDateForDisplay != null ? DateFormat
+                .yMMMEd().format(tripDateForDisplay) : 'No Date';
             String status = tripData['status'] ?? 'Unknown';
             bool isAlreadyCompleted = status.toLowerCase() == 'completed';
+            String? review = tripData['review'] as String?; // Get review if exists
 
             // --- Build UI with CustomScrollView ---
+            // This CustomScrollView is returned as the body of the Scaffold
             return CustomScrollView(
               slivers: <Widget>[
                 // --- 1. Static Header Info ---
-                SliverToBoxAdapter( /* ... same as before ... */
+                SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
-                    child: Column( crossAxisAlignment: CrossAxisAlignment.start, children: [ Text(location, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)), SizedBox(height: 8.0), Row(children: [ Icon(Icons.calendar_today_outlined, size: 16, color: Colors.grey[600]), SizedBox(width: 8.0), Text(formattedDate, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey[700])), ]), Divider(height: 20, thickness: 1), ], ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(location, style: Theme
+                            .of(context)
+                            .textTheme
+                            .headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.bold)),
+                        SizedBox(height: 8.0),
+                        Row(children: [
+                          Icon(Icons.calendar_today_outlined, size: 16,
+                              color: Colors.grey[600]),
+                          SizedBox(width: 8.0),
+                          Text(formattedDate, style: Theme
+                              .of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(color: Colors.grey[700])),
+                        ]),
+                        Divider(height: 20, thickness: 1),
+                      ],
+                    ),
                   ),
                 ),
 
                 // --- 2. Sticky Complete Button (Conditional) ---
                 if (!isAlreadyCompleted)
-                  SliverPersistentHeader( /* ... same as before ... */
-                    delegate: _StickyTripActionButtonHeader(height: 60.0, onCompletePressed: _promptAndCompleteTrip, isCompleting: _isCompleting), pinned: true,
+                  SliverPersistentHeader(
+                    delegate: _StickyTripActionButtonHeader(
+                      height: 60.0,
+                      onCompletePressed: _promptAndCompleteTrip,
+                      // Uses state method
+                      isCompleting: _isCompleting, // Uses state variable
+                    ),
+                    pinned: true,
                   ),
 
                 // --- Optional: Show Review if Completed ---
-                if (isAlreadyCompleted && tripData.containsKey('review') && (tripData['review'] as String).trim().isNotEmpty)
-                  SliverToBoxAdapter( /* ... same as before ... */
-                    child: Padding( padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0), child: Column( crossAxisAlignment: CrossAxisAlignment.start, children: [ Text("Your Review:", style: Theme.of(context).textTheme.titleMedium), SizedBox(height: 4), Text(tripData['review'], style: Theme.of(context).textTheme.bodyMedium), Divider(height: 20, thickness: 1), ], ), ),
+                if (isAlreadyCompleted && review != null && review
+                    .trim()
+                    .isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0, vertical: 10.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Your Review:", style: Theme
+                              .of(context)
+                              .textTheme
+                              .titleMedium),
+                          SizedBox(height: 4),
+                          Text(review, style: Theme
+                              .of(context)
+                              .textTheme
+                              .bodyMedium),
+                          Divider(height: 20, thickness: 1),
+                        ],
+                      ),
+                    ),
                   ),
 
                 // --- Section Header for Catches ---
@@ -235,88 +348,131 @@ class TripDetailsPageState extends State<TripDetailsPage> {
                     padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
                     child: Text(
                       "Catches Recorded:",
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+                      style: Theme
+                          .of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),
 
                 // --- 3. Scrollable Catch List Area (StreamBuilder + SliverList) ---
-                // --- REPLACED PLACEHOLDER ---
                 StreamBuilder<QuerySnapshot>(
-                  // Stream listening to the 'catches' subcollection
-                  stream: _tripDocRef.collection('catches')
-                      .orderBy('caughtAt', descending: true) // Order by newest first
-                      .snapshots(),
+                  stream: _tripDocRef.collection('catches').orderBy(
+                      'caughtAt', descending: true).snapshots(),
                   builder: (context, catchSnapshot) {
-                    // --- Handle Catches Loading ---
-                    if (catchSnapshot.connectionState == ConnectionState.waiting) {
-                      // Show subtle loading within the list area
+                    // Handle catches loading/error/empty states within this builder
+                    if (catchSnapshot.connectionState ==
+                        ConnectionState.waiting) {
                       return SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 20.0),
-                          child: Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 3))),
-                        ),
-                      );
+                          child: Padding(padding: const EdgeInsets.symmetric(
+                              vertical: 20.0), child: Center(child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 3)))));
                     }
-
-                    // --- Handle Catches Error ---
                     if (catchSnapshot.hasError) {
-                      print("Error fetching catches: ${catchSnapshot.error}");
                       return SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Center(child: Text("Error loading catches.", style: TextStyle(color: Colors.red))),
-                        ),
-                      );
+                          child: Padding(padding: const EdgeInsets.all(16.0),
+                              child: Center(child: Text(
+                                  "Error loading catches.",
+                                  style: TextStyle(color: Colors.red)))));
+                    }
+                    if (!catchSnapshot.hasData ||
+                        catchSnapshot.data!.docs.isEmpty) {
+                      return SliverToBoxAdapter(
+                          child: Padding(padding: const EdgeInsets.symmetric(
+                              vertical: 40.0, horizontal: 16.0), child: Center(
+                              child: Text(
+                                  "No catches recorded for this trip yet.\nTap 'Record a Catch' below to add one!",
+                                  style: TextStyle(
+                                      color: Colors.grey, fontSize: 16),
+                                  textAlign: TextAlign.center))));
                     }
 
-                    // --- Handle No Catches Found ---
-                    if (!catchSnapshot.hasData || catchSnapshot.data!.docs.isEmpty) {
-                      return SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 40.0, horizontal: 16.0),
-                          child: Center(
-                            child: Text(
-                              "No catches recorded for this trip yet.\nTap 'Record a Catch' below to add one!",
-                              style: TextStyle(color: Colors.grey, fontSize: 16),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-
-                    // --- Build SliverList with Catch Items ---
+                    // Build the list of catches if data exists
                     final catches = catchSnapshot.data!.docs;
                     return SliverList(
                       delegate: SliverChildBuilderDelegate(
                             (BuildContext context, int index) {
-                          // Get the specific catch document
-                          DocumentSnapshot catchDoc = catches[index];
-                          // Build the list item widget for this catch
-                          return _buildCatchListItem(catchDoc);
+                          return _buildCatchListItem(
+                              catches[index]); // Use helper method
                         },
-                        childCount: catches.length, // Number of items in the list
+                        childCount: catches.length,
                       ),
                     );
-                  },
+                  }, // End of StreamBuilder<QuerySnapshot> builder (for catches)
                 ),
-                // --- END OF REPLACED PLACEHOLDER ---
-
+                // End of StreamBuilder<QuerySnapshot> (for catches)
 
                 // Add bottom padding inside scroll view to avoid overlap with FAB
                 SliverPadding(padding: EdgeInsets.only(bottom: 80)),
-              ],
-            );
-          },
-        ),
+
+              ], // End of slivers list
+            ); // End of CustomScrollView
+          }, // End of StreamBuilder<DocumentSnapshot> builder (for trip details)
+        ), // End of StreamBuilder<DocumentSnapshot> (for trip details)
       ),
+      // End of SafeArea
 
       // --- Bottom Sticky Button ("Record a Catch") ---
-      floatingActionButton: FloatingActionButton.extended( /* ... same as before ... */
-        onPressed: _isCompleting ? null : _recordCatch, label: Text("Record a Catch"), icon: Icon(Icons.add_photo_alternate_outlined), backgroundColor: _isCompleting ? Colors.grey : null,
+      // Wrap the FAB in its own StreamBuilder to access trip data for navigation
+      floatingActionButton: StreamBuilder<DocumentSnapshot>(
+          stream: _tripDocRef.snapshots(),
+          // Listen to the *same* trip document stream
+          builder: (context, fabTripSnapshot) {
+            // Handle loading/error states JUST FOR THE FAB's data needs
+            if (!fabTripSnapshot.hasData || !fabTripSnapshot.data!.exists) {
+              // Return a disabled FAB if trip data isn't ready yet
+              return FloatingActionButton.extended(
+                onPressed: null, // Disabled
+                label: Text("Record a Catch"),
+                icon: Icon(Icons.add_photo_alternate_outlined),
+                backgroundColor: Colors.grey, // Indicate disabled state
+              );
+            }
+
+            // Extract data needed for navigation *inside this builder's scope*
+            final fabTripData = fabTripSnapshot.data!.data() as Map<
+                String,
+                dynamic>;
+            // Provide sensible defaults if data is missing (although it should exist if we got here)
+            final Timestamp currentTripDate = fabTripData['tripDate'] as Timestamp? ??
+                Timestamp.now();
+            final String currentTripLocation = fabTripData['tripLocation'] as String? ??
+                'Unknown Location';
+
+            // Now build the actual FAB with the onPressed callback using the extracted data
+            return FloatingActionButton.extended(
+              // Access the _isCompleting state variable from the main State class
+              onPressed: _isCompleting ? null : () {
+                // Use the data extracted just above for navigation
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        AddCatchPage(
+                          userId: widget.userId, // From widget properties
+                          tripId: widget.tripId, // From widget properties
+                          tripDate: currentTripDate, // Pass the extracted date
+                          tripLocation: currentTripLocation, // Pass the extracted location
+                        ),
+                  ),
+                );
+                print(
+                    "Navigating to AddCatchPage for Trip ID: ${widget.tripId}");
+              },
+              label: Text("Record a Catch"),
+              icon: Icon(Icons.add_photo_alternate_outlined),
+              // Dim the button if completing the trip
+              backgroundColor: _isCompleting ? Colors.grey : null,
+            );
+          } // End of StreamBuilder builder (for FAB)
       ),
+      // End of StreamBuilder (for FAB)
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-    );
-  }
+    ); // End of Scaffold
+  } // End of build method
 }

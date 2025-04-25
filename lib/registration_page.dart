@@ -4,11 +4,11 @@ import 'package:firebase_auth/firebase_auth.dart'; // Keep Firebase Auth import
 // --- RENAME the Widget and State ---
 class RegistrationPage extends StatefulWidget {
   @override
-  _RegistrationPageState createState() => _RegistrationPageState();
+  RegistrationPageState createState() => RegistrationPageState();
 }
 
 // --- RENAME the State class ---
-class _RegistrationPageState extends State<RegistrationPage> {
+class RegistrationPageState extends State<RegistrationPage> {
   // Keep Firebase Auth instance
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -33,7 +33,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
     super.dispose();
   }
 
-  // --- RENAME the core logic function ---
   Future<void> _register() async {
     // --- VALIDATION (Strongly Recommended) ---
     // Uncomment this block once you add validators to your TextFormFields
@@ -91,17 +90,13 @@ class _RegistrationPageState extends State<RegistrationPage> {
       switch (e.code) {
         case 'weak-password':
           message = 'The password provided is too weak.';
-          break;
         case 'email-already-in-use':
           message = 'An account already exists for that email.';
-          break;
         case 'invalid-email':
           message = 'The email address is not valid.';
-          break;
         case 'operation-not-allowed':
         // This usually means email/password auth isn't enabled in Firebase Console
           message = 'Registration is currently disabled. Please contact support.';
-          break;
         default:
           message = 'An error occurred during registration. Please try again.';
       }
@@ -244,6 +239,11 @@ class _RegistrationPageState extends State<RegistrationPage> {
                 // --- CHANGE Button Text and Action ---
                 ElevatedButton(
                   onPressed: _isLoading ? null : _register, // Call _register
+                  style: ElevatedButton.styleFrom( /* ... same style ... */
+                      padding: EdgeInsets.symmetric(vertical: 15.0),
+                      textStyle: TextStyle(fontSize: 16.0),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0))
+                  ),
                   child: _isLoading
                       ? SizedBox( /* ... same loading indicator ... */
                     height: 20.0,
@@ -254,11 +254,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
                     ),
                   )
                       : Text('Register'), // Change text
-                  style: ElevatedButton.styleFrom( /* ... same style ... */
-                      padding: EdgeInsets.symmetric(vertical: 15.0),
-                      textStyle: TextStyle(fontSize: 16.0),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0))
-                  ),
                 ),
 
                 // --- REMOVE the 'Login here' TextButton ---
