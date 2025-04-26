@@ -147,7 +147,11 @@ class RegistrationPageState extends State<RegistrationPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
                 // Keep Logo or Title
-                FlutterLogo(size: 80),
+                Icon(
+                  Icons.phishing, // Fish icon
+                  size: 80, // Adjust size as needed
+                  color: Theme.of(context).primaryColor, // Use theme color
+                ),
                 SizedBox(height: 40.0),
 
                 // --- Email Field (Add validator) ---
