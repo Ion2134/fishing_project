@@ -265,7 +265,7 @@ class AddCatchPageState extends State<AddCatchPage> {
               TextFormField(
                 controller: _lengthController,
                 decoration: InputDecoration(
-                  labelText: 'Length',
+                  labelText: 'Length of Largest Fish',
                   hintText: 'e.g., 18.5',
                   suffixText: 'inches', // Or cm, be consistent!
                   border: OutlineInputBorder(),

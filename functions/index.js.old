@@ -1,0 +1,160 @@
+/* eslint-disable no-constant-condition */
+/* eslint-disable max-len */
+// functions/index.js
+
+// --- IMPORTS ---
+const functions = require("firebase-functions"); // Use V1 main object for Auth trigger
+const {onDocumentDeleted} = require("firebase-functions/v2/firestore"); // Keep V2 for Firestore trigger
+const admin = require("firebase-admin"); // Use V1 style admin import for consistency here
+const logger = require("firebase-functions/logger");
+
+// --- INITIALIZATION ---
+admin.initializeApp();
+const db = admin.firestore();
+const bucket = admin.storage().bucket(); // Use admin.storage()
+
+// --- HELPER FUNCTION (deleteCollectionOrSubcollection - Refined) ---
+/**
+ * Deletes documents in a collection/subcollection in batches and recursively
+ * handles known subcollection names *before* deleting parent docs.
+ * @param {FirebaseFirestore.CollectionReference} collectionRef Reference to the collection to delete.
+ * @param {number} batchSize Number of documents to delete per batch.
+ * @return {Promise<number>} The total number of documents deleted.
+ */
+async function deleteCollectionOrSubcollection(collectionRef, batchSize = 100) {
+  let query = collectionRef.orderBy(admin.firestore.FieldPath.documentId()).limit(batchSize);
+  let deletedCount = 0;
+
+  while (true) {
+    const snapshot = await query.get();
+    // Stop when there are no documents left.
+    if (snapshot.size === 0) {
+      return deletedCount;
+    }
+
+    const batch = db.batch();
+    const subDeletePromises = []; // Store promises for recursive calls
+
+    snapshot.docs.forEach((doc) => {
+      // Check for and initiate deletion of known subcollections FIRST
+      const subcollections = ["catches", "associatedTrips", "caughtSpecies", "trips"]; // Add any other potential nested collections
+      subcollections.forEach((subName) => {
+        subDeletePromises.push(
+            deleteCollectionOrSubcollection(doc.ref.collection(subName), batchSize),
+        );
+      });
+      // Add the parent document deletion to the batch AFTER initiating sub-deletions
+      batch.delete(doc.ref);
+    });
+
+    // Wait for all recursive calls for this batch to complete
+    await Promise.all(subDeletePromises);
+
+    // Commit the batch to delete the parent documents for this chunk
+    await batch.commit();
+    deletedCount += snapshot.size;
+    logger.log(`Deleted ${snapshot.size} docs from path ${collectionRef.path}`);
+
+    // If we deleted less than the batch size, we're done.
+    if (snapshot.size < batchSize) {
+      return deletedCount;
+    }
+
+    // Otherwise, prepare the query for the next batch.
+    const last = snapshot.docs[snapshot.docs.length - 1];
+    query = collectionRef.orderBy(admin.firestore.FieldPath.documentId()).startAfter(last.id).limit(batchSize);
+  }
+}
+
+
+// --- FUNCTION: onTripDeleted (Keep as is, using V2 Firestore trigger) ---
+exports.onTripDeleted = onDocumentDeleted("users/{userId}/trips/{tripId}", async (event) => {
+  const userId = event.params.userId;
+  const tripId = event.params.tripId;
+  logger.log(`Trip deleted: userId=${userId}, tripId=${tripId}. Starting cleanup.`);
+  const batch = db.batch();
+
+  // 1. Delete Catches
+  const catchesRef = db.collection("users").doc(userId).collection("trips").doc(tripId).collection("catches");
+  try {
+    const catchesSnapshot = await catchesRef.get();
+    if (!catchesSnapshot.empty) {
+      logger.log(`Found ${catchesSnapshot.size} catches to delete.`); catchesSnapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+    } else {
+      logger.log("No catches found for this trip.");
+    }
+  } catch (error) {
+    logger.error("Error fetching catches for deletion:", error); return;
+  }
+
+  // 2. Delete Trip Links from Catalog
+  const speciesCatalogRef = db.collection("userFishCatalog").doc(userId).collection("caughtSpecies");
+  try {
+    const speciesSnapshot = await speciesCatalogRef.get();
+    if (!speciesSnapshot.empty) {
+      logger.log(`Checking ${speciesSnapshot.size} species for trip link.`); const deleteLinkPromises = speciesSnapshot.docs.map(async (speciesDoc) => {
+        const speciesId = speciesDoc.id; const tripLinkRef = speciesCatalogRef.doc(speciesId).collection("associatedTrips").doc(tripId); const tripLinkDoc = await tripLinkRef.get(); if (tripLinkDoc.exists) {
+          logger.log(`Found link for trip ${tripId} under species ${speciesId}. Adding delete to batch.`); batch.delete(tripLinkRef);
+        }
+      }); await Promise.all(deleteLinkPromises);
+    } else {
+      logger.log("User has no recorded species in catalog.");
+    }
+  } catch (error) {
+    logger.error("Error fetching/checking species catalog for deletion:", error); return;
+  }
+
+  // 3. Commit Batch
+  try {
+    logger.log("Committing batch operations for onTripDeleted..."); await batch.commit(); logger.log(`Successfully cleaned up catalog data for deleted trip: ${tripId}`); return null;
+  } catch (error) {
+    logger.error("Error committing batch delete for onTripDeleted:", error); return null;
+  }
+});
+
+
+// --- FUNCTION: cleanupUserData (Using V1 Auth trigger syntax) ---
+exports.cleanupUserData = functions.auth.user().onDelete(async (user) => {
+  // V1 trigger provides user record directly
+  const userId = user.uid;
+  if (!userId) {
+    logger.error("User UID not found in deletion event data (V1 trigger).");
+    return;
+  }
+
+  logger.log(`Starting data cleanup for deleted user: ${userId}`);
+
+  // Define paths
+  const userDocRef = db.collection("users").doc(userId);
+  const tripsColRef = userDocRef.collection("trips");
+  const fishCatalogDocRef = db.collection("userFishCatalog").doc(userId);
+  // IMPORTANT: Ensure storage path matches exactly how you create it in the app
+  const storagePrefix = `catch_images/${userId}_`;
+
+  // Use Promise.allSettled to attempt all deletions
+  const results = await Promise.allSettled([
+    // 1. Delete Firestore User Document
+    userDocRef.delete().then(() => logger.log(`Deleted Firestore user doc: ${userId}`)),
+    // 2. Delete Firestore Trips & Catches (Recursively)
+    deleteCollectionOrSubcollection(tripsColRef).then((count) => logger.log(`Deleted ${count} docs from trips collection for user: ${userId}`)),
+    // 3. Delete Firestore Fish Catalog (Recursively)
+    deleteCollectionOrSubcollection(fishCatalogDocRef.collection("caughtSpecies")).then((count) => logger.log(`Deleted ${count} docs from caughtSpecies subcollection for user: ${userId}`)),
+    fishCatalogDocRef.delete().then(() => logger.log(`Deleted Firestore fish catalog doc: ${userId}`)), // Delete the top-level catalog doc itself
+    // 4. Delete Storage Files
+    bucket.deleteFiles({prefix: storagePrefix}).then(() => logger.log(`Deleted Storage files with prefix: ${storagePrefix}`)),
+  ]);
+
+  // Log outcome of each operation
+  results.forEach((result, index) => {
+    if (result.status === "rejected") {
+      logger.error(`Cleanup step ${index + 1} failed for user ${userId}:`, result.reason);
+    } else {
+      logger.log(`Cleanup step ${index + 1} succeeded for user ${userId}.`);
+    }
+  });
+
+  logger.log(`Finished data cleanup attempt for user: ${userId}`);
+  return null; // Indicate completion regardless of partial failures
+}); // End of cleanupUserData function
