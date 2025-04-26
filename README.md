@@ -5,18 +5,13 @@ A Flutter application designed for anglers to log fishing trips, record catches 
 ## Features
 
 *   **User Authentication:** Secure email/password login and registration.
-*   **Trip Logging:** Record trip location and date. Manage trip status (Planned, Ongoing, Completed).
+*   **Trip Logging:** Record trip location and date. Manage trip status.
 *   **Catch Recording:** Log individual fish catches with species, length, quantity, and photos.
 *   **Offline Support:** Basic offline capability for viewing data and logging catches/trips (syncs when back online).
 *   **Fish Catalog:** Automatically generated list of unique species caught by the user.
 *   **Species Details:** View trips where a specific species was caught.
 *   **FishAI Chatbot:** Get facts and ask questions about specific fish species via an integrated chatbot.
 *   **Data Management:** Swipe-to-delete trips (with confirmation), manage account email and password.
-
-## Screenshots
-
-*(Optional but highly recommended: Add screenshots of your app's main screens here)*
-
 
 ## Prerequisites
 
@@ -34,11 +29,11 @@ Follow these steps to get the app running on your local Android device:
 1.  **Clone the Repository:**
     Open your terminal or command prompt and run:
     ```bash
-    git clone [Your GitHub Repository URL]
-    cd [your-repo-directory-name]
+    git clone https://github.com/Ion2134/fishing_project.git
+    cd fishing_project
     ```
 
-2.  **Firebase Configuration (IMPORTANT!)**
+<!-- 2.  **Firebase Configuration (IMPORTANT!)**
 
     This application requires configuration files to connect to the specific Firebase project backend used for development. **These files are NOT included in the public repository for security reasons.** You must obtain them from the project owner ([Your Name/Contact Info]).
 
@@ -64,7 +59,7 @@ Follow these steps to get the app running on your local Android device:
             }
             ```
 
-    **⚠️ Security Warning:** Never commit `google-services.json` or `firebase_options.dart` files containing production or sensitive keys to a public Git repository.
+    **⚠️ Security Warning:** Never commit `google-services.json` or `firebase_options.dart` files containing production or sensitive keys to a public Git repository. -->
 
 3.  **Install Dependencies:**
     Open your terminal *in the root directory* of the cloned project (`[your-repo-directory-name]`) and run:
@@ -77,7 +72,7 @@ Follow these steps to get the app running on your local Android device:
 
 1.  **Connect an Android Device:**
     *   Ensure your Android device is connected to your computer via USB.
-    *   Enable **Developer Options** and **USB Debugging** on your device. (Search online for how to do this for your specific device model).
+    *   Enable **Developer Options** and **USB Debugging** on your device.
     *   Authorize the connection on your device when prompted.
     *   **(OR)** Start an Android Emulator via Android Studio.
 
@@ -97,17 +92,7 @@ Follow these steps to get the app running on your local Android device:
 
 ## Notes & Potential Issues
 
-*   **Firebase Backend:** This setup uses the *developer's existing* Firebase project. You will be reading/writing data to that project. Please use it responsibly for testing purposes.
-*   **FishAI Ngrok URL:** The FishAI chatbot feature currently connects to a temporary URL provided by Ngrok (`https://....ngrok-free.app/...`). This URL might change or expire. If the chatbot feature doesn't work, the URL might need to be updated manually in the `lib/main_pages/fish_ai_chat_sheet.dart` file (variable `_apiUrl`). Contact the project owner if you encounter issues.
+*   **Firebase Backend:** This setup uses my existing Firebase project. You will be reading/writing data to that project. Please use it responsibly for testing purposes. 
+*   **FishAI:** The FishAI chatbot feature currently connects to a temporary URL provided by Ngrok. This URL will only work if I am manually set the transformer to run, as I do not have the paid version. The transformer runs from a google colab notebook.
 *   **`flutter doctor`:** If you encounter build or run issues, run `flutter doctor -v` in your terminal to diagnose potential problems with your Flutter installation or Android setup.
 *   **Clean Build:** Sometimes, cleaning the build cache can resolve issues. Run `flutter clean` and then `flutter pub get` again before trying `flutter run`.
-
-## Contributing
-
-*(Optional: Add guidelines if you accept contributions)*
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-
-## License
-
-*(Optional: Specify your license, e.g., MIT)*
-[MIT](https://choosealicense.com/licenses/mit/)
